@@ -59,39 +59,40 @@ export function TaskDetailPanel({
   }, [task?.id, open]);
 
   if (!task) return null;
+  const t = task;
 
-  const activeLabels = taskLabels[task.id] ?? [];
+  const activeLabels = taskLabels[t.id] ?? [];
 
   const isDirty =
-    draftAssignee !== (task.assignee_id ?? "none") ||
-    draftPriority !== task.priority ||
-    draftDueDate !== (task.due_date ?? "") ||
+    draftAssignee !== (t.assignee_id ?? "none") ||
+    draftPriority !== t.priority ||
+    draftDueDate !== (t.due_date ?? "") ||
     JSON.stringify([...draftLabels].sort()) !== JSON.stringify([...activeLabels].sort());
 
   async function handleConfirm() {
     setSaving(true);
     try {
       const updates: Partial<Task> = {};
-      if (draftAssignee !== (task.assignee_id ?? "none"))
+      if (draftAssignee !== (t.assignee_id ?? "none"))
         updates.assignee_id = draftAssignee === "none" ? null : draftAssignee;
-      if (draftPriority !== task.priority) updates.priority = draftPriority;
-      if (draftDueDate !== (task.due_date ?? ""))
+      if (draftPriority !== t.priority) updates.priority = draftPriority;
+      if (draftDueDate !== (t.due_date ?? ""))
         updates.due_date = draftDueDate || null;
-      if (Object.keys(updates).length > 0) await updateTask(task.id, updates);
+      if (Object.keys(updates).length > 0) await updateTask(t.id, updates);
 
       const prev = new Set(activeLabels);
       const next = new Set(draftLabels);
-      for (const id of [...prev]) if (!next.has(id)) await toggleTaskLabel(task.id, id);
-      for (const id of [...next]) if (!prev.has(id)) await toggleTaskLabel(task.id, id);
+      for (const id of [...prev]) if (!next.has(id)) await toggleTaskLabel(t.id, id);
+      for (const id of [...next]) if (!prev.has(id)) await toggleTaskLabel(t.id, id);
     } finally {
       setSaving(false);
     }
   }
 
   function handleCancel() {
-    setDraftAssignee(task.assignee_id ?? "none");
-    setDraftPriority(task.priority);
-    setDraftDueDate(task.due_date ?? "");
+    setDraftAssignee(t.assignee_id ?? "none");
+    setDraftPriority(t.priority);
+    setDraftDueDate(t.due_date ?? "");
     setDraftLabels(activeLabels);
   }
 
@@ -105,7 +106,7 @@ export function TaskDetailPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col px-8 pb-8 sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="pr-6 text-left">{task.title}</SheetTitle>
+          <SheetTitle className="pr-6 text-left">{t.title}</SheetTitle>
         </SheetHeader>
 
         {/* Assignee + priority row */}

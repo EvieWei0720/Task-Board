@@ -16,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { NewTask } from "@/hooks/useTasks";
 import type { Priority, Status, TeamMember, Label, Task } from "@/types";
