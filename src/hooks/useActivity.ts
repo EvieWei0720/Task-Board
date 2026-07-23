@@ -17,7 +17,21 @@ export function useActivity(taskId: string | null) {
 
   useEffect(() => {
     fetchActivity();
-  }, [fetchActivity]);
+    if (!taskId) return;
+
+    const channel = supabase
+      .channel(`activity:${taskId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "activity_log", filter: `task_id=eq.${taskId}` },
+        (payload) => {
+          setActivity((prev) => [payload.new as Activity, ...prev]);
+        },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [taskId, fetchActivity]);
 
   return { activity, refetch: fetchActivity };
 }
