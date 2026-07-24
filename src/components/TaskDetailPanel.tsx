@@ -88,14 +88,6 @@ export function TaskDetailPanel({
   const activeLabels = taskLabels[t.id] ?? [];
   const activeAssignees = taskAssignees[t.id] ?? [];
 
-  const isDirty =
-    draftDescription !== (t.description ?? "") ||
-    draftStatus !== t.status ||
-    draftPriority !== t.priority ||
-    draftDueDate !== (t.due_date ?? "") ||
-    JSON.stringify([...draftAssignees].sort()) !== JSON.stringify([...activeAssignees].sort()) ||
-    JSON.stringify([...draftLabels].sort()) !== JSON.stringify([...activeLabels].sort());
-
   async function handleConfirm() {
     setSaving(true);
     try {
@@ -121,15 +113,6 @@ export function TaskDetailPanel({
     } finally {
       setSaving(false);
     }
-  }
-
-  function handleCancel() {
-    setDraftDescription(t.description ?? "");
-    setDraftStatus(t.status);
-    setDraftPriority(t.priority);
-    setDraftDueDate(t.due_date ?? "");
-    setDraftAssignees(activeAssignees);
-    setDraftLabels(activeLabels);
   }
 
   function toggleDraftLabel(id: string) {

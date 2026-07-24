@@ -23,7 +23,6 @@ export function TaskCard({
   isOverlay = false,
   assignees = [],
   labels = [],
-  onClick,
   onEdit,
   onComments,
   onActivity,
@@ -33,7 +32,6 @@ export function TaskCard({
   isOverlay?: boolean;
   assignees?: TeamMember[];
   labels?: Label[];
-  onClick?: () => void;
   onEdit?: () => void;
   onComments?: () => void;
   onActivity?: () => void;

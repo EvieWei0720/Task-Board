@@ -66,7 +66,7 @@ export function Board() {
             priority: i.priority as Task["priority"] | undefined,
             due_date: i.due_date ?? null,
             status: i.status as Status | undefined,
-            assignee_id: i.assignee_id ?? null,
+            assignee_ids: i.assignee_id ? [i.assignee_id] : [],
           });
         } else if (a.name === "update_task") {
           const updates: Partial<Task> = {};
