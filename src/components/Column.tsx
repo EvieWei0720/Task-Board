@@ -12,7 +12,6 @@ interface ColumnProps {
   labels: Label[];
   taskLabels: Record<string, string[]>;
   taskAssignees: Record<string, string[]>;
-  onTaskClick: (task: Task) => void;
   onTaskEdit: (task: Task) => void;
   onTaskComments: (task: Task) => void;
   onTaskActivity: (task: Task) => void;
@@ -28,7 +27,6 @@ export function Column({
   labels,
   taskLabels,
   taskAssignees,
-  onTaskClick,
   onTaskEdit,
   onTaskComments,
   onTaskActivity,
@@ -78,7 +76,6 @@ export function Column({
               labels={labels.filter((l) =>
                 (taskLabels[task.id] ?? []).includes(l.id),
               )}
-              onClick={() => onTaskClick(task)}
               onEdit={() => onTaskEdit(task)}
               onComments={() => onTaskComments(task)}
               onActivity={() => onTaskActivity(task)}

@@ -274,7 +274,6 @@ export function Board() {
                 labels={labels}
                 taskLabels={taskLabels}
                 taskAssignees={taskAssignees}
-                onTaskClick={(task) => openTask(task)}
                 onTaskEdit={(task) => openTask(task, "edit")}
                 onTaskComments={(task) => openTask(task, "comments")}
                 onTaskActivity={(task) => openTask(task, "activity")}

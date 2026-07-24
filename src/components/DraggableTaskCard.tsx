@@ -7,7 +7,6 @@ export function DraggableTaskCard({
   task,
   assignees,
   labels,
-  onClick,
   onEdit,
   onComments,
   onActivity,
@@ -16,7 +15,6 @@ export function DraggableTaskCard({
   task: Task;
   assignees?: TeamMember[];
   labels?: Label[];
-  onClick?: () => void;
   onEdit?: () => void;
   onComments?: () => void;
   onActivity?: () => void;
@@ -36,7 +34,6 @@ export function DraggableTaskCard({
         task={task}
         assignees={assignees}
         labels={labels}
-        onClick={onClick}
         onEdit={onEdit}
         onComments={onComments}
         onActivity={onActivity}
