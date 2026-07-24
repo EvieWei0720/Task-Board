@@ -5,9 +5,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,42 +25,59 @@ import { useComments } from "@/hooks/useComments";
 import { useActivity } from "@/hooks/useActivity";
 import { timeAgo } from "@/lib/board";
 import { cn } from "@/lib/utils";
-import type { Task, TeamMember, Label } from "@/types";
+import type { Task, TeamMember, Label, Status } from "@/types";
+
+const STATUS_LABELS: Record<Status, string> = {
+  todo: "To Do",
+  in_progress: "In Progress",
+  in_review: "In Review",
+  done: "Done",
+};
 
 export function TaskDetailPanel({
   task,
   open,
   onOpenChange,
+  defaultTab = "edit",
   members,
   labels,
   taskLabels,
+  taskAssignees,
   updateTask,
   toggleTaskLabel,
+  toggleTaskAssignee,
 }: {
   task: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultTab?: "edit" | "comments" | "activity";
   members: TeamMember[];
   labels: Label[];
   taskLabels: Record<string, string[]>;
+  taskAssignees: Record<string, string[]>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   toggleTaskLabel: (taskId: string, labelId: string) => Promise<void>;
+  toggleTaskAssignee: (taskId: string, memberId: string) => Promise<void>;
 }) {
   const { comments, addComment } = useComments(task?.id ?? null);
   const { activity } = useActivity(task?.id ?? null);
   const [commentText, setCommentText] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [draftAssignee, setDraftAssignee] = useState<string>("none");
+  const [draftDescription, setDraftDescription] = useState<string>("");
+  const [draftStatus, setDraftStatus] = useState<Status>("todo");
   const [draftPriority, setDraftPriority] = useState<Task["priority"]>("normal");
   const [draftDueDate, setDraftDueDate] = useState<string>("");
+  const [draftAssignees, setDraftAssignees] = useState<string[]>([]);
   const [draftLabels, setDraftLabels] = useState<string[]>([]);
 
   useEffect(() => {
     if (task) {
-      setDraftAssignee(task.assignee_id ?? "none");
+      setDraftDescription(task.description ?? "");
+      setDraftStatus(task.status);
       setDraftPriority(task.priority);
       setDraftDueDate(task.due_date ?? "");
+      setDraftAssignees(taskAssignees[task.id] ?? []);
       setDraftLabels(taskLabels[task.id] ?? []);
     }
   }, [task?.id, open]);
@@ -62,37 +86,49 @@ export function TaskDetailPanel({
   const t = task;
 
   const activeLabels = taskLabels[t.id] ?? [];
+  const activeAssignees = taskAssignees[t.id] ?? [];
 
   const isDirty =
-    draftAssignee !== (t.assignee_id ?? "none") ||
+    draftDescription !== (t.description ?? "") ||
+    draftStatus !== t.status ||
     draftPriority !== t.priority ||
     draftDueDate !== (t.due_date ?? "") ||
+    JSON.stringify([...draftAssignees].sort()) !== JSON.stringify([...activeAssignees].sort()) ||
     JSON.stringify([...draftLabels].sort()) !== JSON.stringify([...activeLabels].sort());
 
   async function handleConfirm() {
     setSaving(true);
     try {
       const updates: Partial<Task> = {};
-      if (draftAssignee !== (t.assignee_id ?? "none"))
-        updates.assignee_id = draftAssignee === "none" ? null : draftAssignee;
+      if (draftDescription !== (t.description ?? ""))
+        updates.description = draftDescription || null;
+      if (draftStatus !== t.status) updates.status = draftStatus;
       if (draftPriority !== t.priority) updates.priority = draftPriority;
       if (draftDueDate !== (t.due_date ?? ""))
         updates.due_date = draftDueDate || null;
       if (Object.keys(updates).length > 0) await updateTask(t.id, updates);
 
+      const prevA = new Set(activeAssignees);
+      const nextA = new Set(draftAssignees);
+      for (const id of [...prevA]) if (!nextA.has(id)) await toggleTaskAssignee(t.id, id);
+      for (const id of [...nextA]) if (!prevA.has(id)) await toggleTaskAssignee(t.id, id);
+
       const prev = new Set(activeLabels);
       const next = new Set(draftLabels);
       for (const id of [...prev]) if (!next.has(id)) await toggleTaskLabel(t.id, id);
       for (const id of [...next]) if (!prev.has(id)) await toggleTaskLabel(t.id, id);
+      onOpenChange(false);
     } finally {
       setSaving(false);
     }
   }
 
   function handleCancel() {
-    setDraftAssignee(t.assignee_id ?? "none");
+    setDraftDescription(t.description ?? "");
+    setDraftStatus(t.status);
     setDraftPriority(t.priority);
     setDraftDueDate(t.due_date ?? "");
+    setDraftAssignees(activeAssignees);
     setDraftLabels(activeLabels);
   }
 
@@ -102,148 +138,22 @@ export function TaskDetailPanel({
     );
   }
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col px-8 pb-8 sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle className="pr-6 text-left">{t.title}</SheetTitle>
-        </SheetHeader>
-
-        {/* Assignee + priority row */}
-        <div className="grid grid-cols-2 gap-3 py-2">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Assignee
-            </label>
-            <Select
-              value={draftAssignee}
-              onValueChange={(v) => setDraftAssignee(v ?? "none")}
-            >
-              <SelectTrigger>
-                <span className="flex flex-1 text-left text-sm">
-                  {draftAssignee === "none"
-                    ? "Unassigned"
-                    : (members.find((m) => m.id === draftAssignee)?.name ?? "Unassigned")}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
-                {members.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Priority
-            </label>
-            <Select
-              value={draftPriority}
-              onValueChange={(v) => setDraftPriority((v ?? "normal") as Task["priority"])}
-            >
-              <SelectTrigger>
-                <span className="flex flex-1 text-left text-sm capitalize">
-                  {draftPriority}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Due date */}
-        <div className="space-y-1.5 pb-1">
-          <label className="text-xs font-medium text-muted-foreground">
-            Due date
-          </label>
-          <Input
-            type="date"
-            value={draftDueDate}
-            onChange={(e) => setDraftDueDate(e.target.value)}
-          />
-        </div>
-
-        {/* Labels */}
-        <div className="space-y-1.5 py-1">
-          <label className="text-xs font-medium text-muted-foreground">
-            Labels
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {labels.map((l) => {
-              const active = draftLabels.includes(l.id);
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => toggleDraftLabel(l.id)}
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium transition-all",
-                    active ? "text-white" : "text-muted-foreground opacity-50",
-                  )}
-                  style={{
-                    backgroundColor: active ? l.color : "transparent",
-                    border: `1px solid ${l.color}`,
-                  }}
-                >
-                  {l.name}
-                </button>
-              );
-            })}
-            {labels.length === 0 && (
-              <span className="text-xs text-muted-foreground">
-                No labels created yet
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Confirm / Cancel */}
-        {isDirty && (
-          <div className="flex gap-2 pt-1">
-            <Button size="sm" onClick={handleConfirm} disabled={saving}>
-              {saving ? "Saving…" : "Confirm the change"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={handleCancel} disabled={saving}>
-              Cancel
-            </Button>
-          </div>
-        )}
-
-        {/* Comments + activity tabs */}
-        <Tabs
-          defaultValue="comments"
-          className="mt-2 flex flex-1 flex-col overflow-hidden"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="comments">
-              Comments ({comments.length})
-            </TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="comments"
-            className="flex flex-1 flex-col overflow-hidden"
-          >
-            <div className="flex-1 space-y-3 overflow-y-auto py-3">
+  if (defaultTab === "comments") {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="flex w-full flex-col px-4 pb-4 sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle className="pr-6 text-left">{t.title}</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-1 flex-col overflow-hidden pt-2">
+            <div className="flex-1 space-y-3 overflow-y-auto">
               {comments.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  No comments yet
-                </p>
+                <p className="py-6 text-center text-sm text-muted-foreground">No comments yet</p>
               ) : (
                 comments.map((c) => (
                   <div key={c.id} className="rounded-lg bg-muted/50 p-2.5">
                     <p className="text-sm">{c.body}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {timeAgo(c.created_at)}
-                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{timeAgo(c.created_at)}</p>
                   </div>
                 ))
               )}
@@ -254,29 +164,29 @@ export function TaskDetailPanel({
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addComment(commentText);
-                    setCommentText("");
-                  }
+                  if (e.key === "Enter") { addComment(commentText); setCommentText(""); }
                 }}
               />
-              <Button
-                size="sm"
-                onClick={() => {
-                  addComment(commentText);
-                  setCommentText("");
-                }}
-              >
+              <Button size="sm" onClick={() => { addComment(commentText); setCommentText(""); }}>
                 Send
               </Button>
             </div>
-          </TabsContent>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
-          <TabsContent value="activity" className="flex-1 overflow-y-auto py-3">
+  if (defaultTab === "activity") {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="flex w-full flex-col px-4 pb-4 sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle className="pr-6 text-left">{t.title}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto pt-2">
             {activity.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No activity yet
-              </p>
+              <p className="py-6 text-center text-sm text-muted-foreground">No activity yet</p>
             ) : (
               <div className="space-y-3">
                 {activity.map((a) => (
@@ -284,17 +194,170 @@ export function TaskDetailPanel({
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
                     <div>
                       <p className="text-foreground">{a.description}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {timeAgo(a.created_at)}
-                      </p>
+                      <p className="text-[11px] text-muted-foreground">{timeAgo(a.created_at)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t.title}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Description */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Description</label>
+            <Textarea
+              placeholder="Add more detail (optional)"
+              value={draftDescription}
+              onChange={(e) => setDraftDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          {/* Status + Priority */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <Select
+                value={draftStatus}
+                onValueChange={(v) => setDraftStatus((v ?? "todo") as Status)}
+              >
+                <SelectTrigger>
+                  <span className="flex flex-1 text-left text-sm">
+                    {STATUS_LABELS[draftStatus]}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Priority</label>
+              <Select
+                value={draftPriority}
+                onValueChange={(v) => setDraftPriority((v ?? "normal") as Task["priority"])}
+              >
+                <SelectTrigger>
+                  <span className="flex flex-1 text-left text-sm capitalize">
+                    {draftPriority}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Due date */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Due date</label>
+            <Input
+              type="date"
+              value={draftDueDate}
+              onChange={(e) => setDraftDueDate(e.target.value)}
+            />
+          </div>
+
+          {/* Assignees */}
+          {members.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-xs font-medium text-muted-foreground">Assignee</label>
+              <div className="flex flex-wrap gap-2">
+                {members.map((m) => {
+                  const active = draftAssignees.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() =>
+                        setDraftAssignees((prev) =>
+                          prev.includes(m.id)
+                            ? prev.filter((id) => id !== m.id)
+                            : [...prev, m.id],
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-full py-0.5 pl-1 pr-2.5 text-xs font-medium transition-all"
+                      style={{
+                        backgroundColor: active ? m.avatar_color : "transparent",
+                        border: `1px solid ${m.avatar_color}`,
+                        color: active ? "white" : "var(--muted-foreground)",
+                        opacity: active ? 1 : 0.6,
+                      }}
+                    >
+                      <span
+                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ backgroundColor: m.avatar_color }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span title={m.name.length > 10 ? m.name : undefined}>
+                        {m.name.length > 10 ? m.name.slice(0, 10) + "…" : m.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Labels */}
+          <div className="space-y-3">
+            <label className="text-xs font-medium text-muted-foreground">Labels</label>
+            <div className="flex flex-wrap gap-1.5">
+              {labels.map((l) => {
+                const active = draftLabels.includes(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => toggleDraftLabel(l.id)}
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-xs font-medium transition-all",
+                      active ? "text-white" : "text-muted-foreground opacity-50",
+                    )}
+                    style={{
+                      backgroundColor: active ? l.color : "transparent",
+                      border: `1px solid ${l.color}`,
+                    }}
+                  >
+                    <span title={l.name.length > 10 ? l.name : undefined}>
+                      {l.name.length > 10 ? l.name.slice(0, 10) + "…" : l.name}
+                    </span>
+                  </button>
+                );
+              })}
+              {labels.length === 0 && (
+                <span className="text-xs text-muted-foreground">No labels created yet</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirm} disabled={saving}>
+            {saving ? "Saving…" : "Confirm"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

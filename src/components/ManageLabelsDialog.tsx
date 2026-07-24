@@ -61,10 +61,11 @@ export function ManageLabelsDialog({
               <button
                 key={c}
                 onClick={() => setColor(c)}
-                className="h-6 w-6 rounded-full"
+                className="h-6 w-6 rounded-full ring-offset-2 transition-all"
                 style={{
                   backgroundColor: c,
-                  boxShadow: color === c ? `0 0 0 2px ${c}` : "none",
+                  outline: color === c ? `2px solid ${c}` : "none",
+                  outlineOffset: "2px",
                 }}
                 aria-label={`Color ${c}`}
               />
@@ -81,8 +82,9 @@ export function ManageLabelsDialog({
               key={l.id}
               className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
               style={{ backgroundColor: l.color }}
+              title={l.name.length > 10 ? l.name : undefined}
             >
-              {l.name}
+              {l.name.length > 10 ? l.name.slice(0, 10) + "…" : l.name}
               <button onClick={() => deleteLabel(l.id)}>
                 <X className="h-3 w-3" />
               </button>

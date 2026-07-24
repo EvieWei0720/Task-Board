@@ -20,6 +20,14 @@ const COLORS = [
   "#8e4ec6",
 ];
 
+function colorFromName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return COLORS[Math.abs(hash) % COLORS.length];
+}
+
 export function ManageTeamDialog({
   members,
   addMember,
@@ -30,13 +38,11 @@ export function ManageTeamDialog({
   removeMember: (id: string) => Promise<void>;
 }) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState(COLORS[0]);
 
   async function handleAdd() {
     if (!name.trim()) return;
-    await addMember(name.trim(), color);
+    await addMember(name.trim(), colorFromName(name.trim()));
     setName("");
-    setColor(COLORS[Math.floor(Math.random() * COLORS.length)]);
   }
 
   return (
@@ -57,20 +63,6 @@ export function ManageTeamDialog({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           />
-          <div className="flex gap-1">
-            {COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className="h-6 w-6 rounded-full ring-offset-2 transition-all"
-                style={{
-                  backgroundColor: c,
-                  boxShadow: color === c ? `0 0 0 2px ${c}` : "none",
-                }}
-                aria-label={`Color ${c}`}
-              />
-            ))}
-          </div>
           <Button size="sm" onClick={handleAdd} disabled={!name.trim()}>
             Add
           </Button>

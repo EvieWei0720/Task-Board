@@ -79,17 +79,17 @@ export function AgentPanel({
         <Sparkles className="h-4 w-4" />
         AI Assistant
       </SheetTrigger>
-      <SheetContent className="flex w-full flex-col px-8 pb-8 sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2 text-left">
-            <Sparkles className="h-4 w-4 text-brand" />
+      <SheetContent className="flex w-full flex-col px-3 pb-3 sm:max-w-md">
+        <SheetHeader className="pb-1">
+          <SheetTitle className="flex items-center gap-1.5 text-left text-sm">
+            <Sparkles className="h-3.5 w-3.5 text-brand" />
             AI Assistant
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 space-y-3 overflow-y-auto py-3">
+        <div className="flex-1 space-y-2 overflow-y-auto py-1">
           {messages.length === 0 && (
-            <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+            <div className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
               Try: "Create a high-priority task to fix the login bug", "Move
               everything in review to done", or "How many tasks are overdue?"
             </div>
@@ -97,20 +97,20 @@ export function AgentPanel({
 
           {messages.map((m, idx) =>
             m.role === "user" ? (
-              <div key={idx} className="flex items-end justify-end gap-2">
-                <div className="max-w-[75%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+              <div key={idx} className="flex items-end justify-end gap-1.5">
+                <div className="max-w-[75%] rounded-lg bg-primary px-2.5 py-1.5 text-xs text-primary-foreground">
                   {m.content}
                 </div>
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <User className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               </div>
             ) : (
-              <div key={idx} className="flex items-end gap-2">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary">
-                  <Sparkles className="h-4 w-4 text-primary-foreground" />
+              <div key={idx} className="flex items-end gap-1.5">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary">
+                  <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
                 </div>
-                <div className="max-w-[75%] rounded-lg bg-muted px-3 py-2 text-sm">
+                <div className="max-w-[75%] rounded-lg bg-muted px-2.5 py-1.5 text-xs">
                   {m.content}
                 </div>
               </div>
@@ -118,33 +118,26 @@ export function AgentPanel({
           )}
 
           {loading && (
-            <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+            <div className="max-w-[85%] rounded-lg bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
               Thinking…
             </div>
           )}
 
-          {/* Proposed actions awaiting confirmation */}
           {pending.length > 0 && (
-            <div className="rounded-lg border border-brand/30 bg-brand/5 p-3">
-              <p className="mb-2 text-xs font-semibold text-foreground">
+            <div className="rounded-md border border-brand/30 bg-brand/5 p-2">
+              <p className="mb-1.5 text-xs font-semibold text-foreground">
                 I'd like to make these changes:
               </p>
-              <ul className="mb-3 space-y-1">
+              <ul className="mb-2 space-y-0.5">
                 {pending.map((a) => (
-                  <li key={a.id} className="text-sm text-foreground">
+                  <li key={a.id} className="text-xs text-foreground">
                     • {describeAction(a)}
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleConfirm}>
-                  Confirm
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => resolvePending("Cancelled.")}
-                >
+              <div className="flex gap-1.5">
+                <Button size="sm" onClick={handleConfirm}>Confirm</Button>
+                <Button size="sm" variant="ghost" onClick={() => resolvePending("Cancelled.")}>
                   Cancel
                 </Button>
               </div>
@@ -152,13 +145,13 @@ export function AgentPanel({
           )}
 
           {error && (
-            <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            <div className="rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600">
               {error}
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 border-t border-border pt-3">
+        <div className="flex items-center gap-1.5 border-t border-border pt-2">
           <Input
             placeholder="Ask or tell the assistant…"
             value={input}

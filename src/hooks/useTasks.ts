@@ -10,26 +10,28 @@ export interface NewTask {
   priority?: Priority;
   due_date?: string | null;
   status?: Status;
-  assignee_id?: string | null;
+  assignee_ids?: string[];
 }
 
 export function useTasks() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskLabels, setTaskLabels] = useState<Record<string, string[]>>({});
+  const [taskAssignees, setTaskAssignees] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [tasksRes, linksRes] = await Promise.all([
+    const [tasksRes, labelsRes, assigneesRes] = await Promise.all([
       supabase
         .from("tasks")
         .select("*")
         .order("position", { ascending: true })
         .order("created_at", { ascending: true }),
       supabase.from("task_labels").select("task_id, label_id"),
+      supabase.from("task_assignees").select("task_id, member_id"),
     ]);
 
     if (tasksRes.error) {
@@ -38,13 +40,22 @@ export function useTasks() {
       setTasks(tasksRes.data ?? []);
     }
 
-    if (!linksRes.error && linksRes.data) {
+    if (!labelsRes.error && labelsRes.data) {
       const map: Record<string, string[]> = {};
-      for (const row of linksRes.data) {
+      for (const row of labelsRes.data) {
         (map[row.task_id] ??= []).push(row.label_id);
       }
       setTaskLabels(map);
     }
+
+    if (!assigneesRes.error && assigneesRes.data) {
+      const map: Record<string, string[]> = {};
+      for (const row of assigneesRes.data) {
+        (map[row.task_id] ??= []).push(row.member_id);
+      }
+      setTaskAssignees(map);
+    }
+
     setLoading(false);
   }, []);
 
@@ -61,7 +72,6 @@ export function useTasks() {
         priority: input.priority ?? "normal",
         due_date: input.due_date ?? null,
         status: input.status ?? "todo",
-        assignee_id: input.assignee_id ?? null,
       })
       .select()
       .single();
@@ -71,6 +81,16 @@ export function useTasks() {
       throw error;
     }
     setTasks((prev) => [...prev, data]);
+
+    if (input.assignee_ids?.length) {
+      const rows = input.assignee_ids.map((member_id) => ({
+        task_id: data.id,
+        member_id,
+      }));
+      await supabase.from("task_assignees").insert(rows);
+      setTaskAssignees((prev) => ({ ...prev, [data.id]: input.assignee_ids! }));
+    }
+
     logActivity(data.id, "Created task");
     return data;
   }, []);
@@ -108,7 +128,6 @@ export function useTasks() {
       const current = taskLabels[taskId] ?? [];
       const hasLabel = current.includes(labelId);
 
-      // Optimistic
       setTaskLabels((prev) => {
         const next = { ...prev };
         next[taskId] = hasLabel
@@ -132,9 +151,39 @@ export function useTasks() {
     [taskLabels],
   );
 
+  const toggleTaskAssignee = useCallback(
+    async (taskId: string, memberId: string) => {
+      const hasAssignee = (taskAssignees[taskId] ?? []).includes(memberId);
+
+      setTaskAssignees((prev) => {
+        const cur = prev[taskId] ?? [];
+        return {
+          ...prev,
+          [taskId]: cur.includes(memberId)
+            ? cur.filter((id) => id !== memberId)
+            : [...cur, memberId],
+        };
+      });
+
+      if (hasAssignee) {
+        await supabase
+          .from("task_assignees")
+          .delete()
+          .eq("task_id", taskId)
+          .eq("member_id", memberId);
+      } else {
+        await supabase
+          .from("task_assignees")
+          .insert({ task_id: taskId, member_id: memberId });
+      }
+    },
+    [taskAssignees],
+  );
+
   return {
     tasks,
     taskLabels,
+    taskAssignees,
     loading,
     error,
     fetchTasks,
@@ -142,5 +191,6 @@ export function useTasks() {
     updateTask,
     deleteTask,
     toggleTaskLabel,
+    toggleTaskAssignee,
   };
 }

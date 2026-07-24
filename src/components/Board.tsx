@@ -22,6 +22,13 @@ import { ManageTeamDialog } from "./ManageTeamDialog";
 import { ManageLabelsDialog } from "./ManageLabelsDialog";
 import { FilterBar, type Filters } from "./FilterBar";
 import { TaskDetailPanel } from "./TaskDetailPanel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { Status, Task } from "@/types";
 import { AgentPanel } from "./AgentPanel";
 import type { AgentAction } from "@/hooks/useAgent";
@@ -36,11 +43,14 @@ export function Board() {
   const {
     tasks,
     taskLabels,
+    taskAssignees,
     loading,
     error,
     createTask,
     updateTask,
+    deleteTask,
     toggleTaskLabel,
+    toggleTaskAssignee,
   } = useTasks();
   const { members, addMember, removeMember } = useTeamMembers();
   const { labels, createLabel, deleteLabel } = useLabels();
@@ -79,6 +89,8 @@ export function Board() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<"edit" | "comments" | "activity">("edit");
+  const [pendingMove, setPendingMove] = useState<{ task: Task; newStatus: Status } | null>(null);
   const [filters, setFilters] = useState<Filters>({
     search: "",
     priority: "all",
@@ -157,16 +169,24 @@ export function Board() {
     const task = tasks.find((t) => t.id === active.id);
     const newStatus = over.id as Status;
     if (task && task.status !== newStatus) {
-      updateTask(task.id, { status: newStatus });
-      logActivity(
-        task.id,
-        `Moved from ${STATUS_LABELS[task.status]} → ${STATUS_LABELS[newStatus]}`,
-      );
+      setPendingMove({ task, newStatus });
     }
   }
 
-  function openTask(task: Task) {
+  async function confirmMove() {
+    if (!pendingMove) return;
+    const { task, newStatus } = pendingMove;
+    setPendingMove(null);
+    await updateTask(task.id, { status: newStatus });
+    logActivity(
+      task.id,
+      `Moved from ${STATUS_LABELS[task.status]} → ${STATUS_LABELS[newStatus]}`,
+    );
+  }
+
+  function openTask(task: Task, tab: "edit" | "comments" | "activity" = "edit") {
     setSelectedTask(task);
+    setDetailTab(tab);
     setDetailOpen(true);
   }
 
@@ -253,7 +273,12 @@ export function Board() {
                 members={members}
                 labels={labels}
                 taskLabels={taskLabels}
-                onTaskClick={openTask}
+                taskAssignees={taskAssignees}
+                onTaskClick={(task) => openTask(task)}
+                onTaskEdit={(task) => openTask(task, "edit")}
+                onTaskComments={(task) => openTask(task, "comments")}
+                onTaskActivity={(task) => openTask(task, "activity")}
+                onTaskDelete={(task) => deleteTask(task.id)}
               />
             ))}
           </div>
@@ -263,7 +288,9 @@ export function Board() {
               <TaskCard
                 task={activeTask}
                 isOverlay
-                assignee={members.find((m) => m.id === activeTask.assignee_id)}
+                assignees={members.filter((m) =>
+                  (taskAssignees[activeTask.id] ?? []).includes(m.id),
+                )}
                 labels={labels.filter((l) =>
                   (taskLabels[activeTask.id] ?? []).includes(l.id),
                 )}
@@ -277,12 +304,42 @@ export function Board() {
         task={liveSelected}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        defaultTab={detailTab}
         members={members}
         labels={labels}
         taskLabels={taskLabels}
+        taskAssignees={taskAssignees}
         updateTask={updateTask}
         toggleTaskLabel={toggleTaskLabel}
+        toggleTaskAssignee={toggleTaskAssignee}
       />
+
+      <Dialog open={!!pendingMove} onOpenChange={(o) => !o && setPendingMove(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Move task?</DialogTitle>
+          </DialogHeader>
+          {pendingMove && (
+            <p className="text-sm text-muted-foreground">
+              Move "{pendingMove.task.title}" from{" "}
+              <span className="font-medium text-foreground">
+                {STATUS_LABELS[pendingMove.task.status]}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium text-foreground">
+                {STATUS_LABELS[pendingMove.newStatus]}
+              </span>
+              ?
+            </p>
+          )}
+          <div className="mt-2 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPendingMove(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmMove}>Move</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

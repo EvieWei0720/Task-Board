@@ -5,14 +5,22 @@ import type { Task, TeamMember, Label } from "@/types";
 
 export function DraggableTaskCard({
   task,
-  assignee,
+  assignees,
   labels,
   onClick,
+  onEdit,
+  onComments,
+  onActivity,
+  onDelete,
 }: {
   task: Task;
-  assignee?: TeamMember;
+  assignees?: TeamMember[];
   labels?: Label[];
   onClick?: () => void;
+  onEdit?: () => void;
+  onComments?: () => void;
+  onActivity?: () => void;
+  onDelete?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: task.id });
@@ -26,9 +34,13 @@ export function DraggableTaskCard({
     >
       <TaskCard
         task={task}
-        assignee={assignee}
+        assignees={assignees}
         labels={labels}
         onClick={onClick}
+        onEdit={onEdit}
+        onComments={onComments}
+        onActivity={onActivity}
+        onDelete={onDelete}
       />
     </div>
   );

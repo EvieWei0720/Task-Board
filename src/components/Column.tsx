@@ -11,7 +11,12 @@ interface ColumnProps {
   members: TeamMember[];
   labels: Label[];
   taskLabels: Record<string, string[]>;
+  taskAssignees: Record<string, string[]>;
   onTaskClick: (task: Task) => void;
+  onTaskEdit: (task: Task) => void;
+  onTaskComments: (task: Task) => void;
+  onTaskActivity: (task: Task) => void;
+  onTaskDelete: (task: Task) => void;
 }
 
 export function Column({
@@ -22,7 +27,12 @@ export function Column({
   members,
   labels,
   taskLabels,
+  taskAssignees,
   onTaskClick,
+  onTaskEdit,
+  onTaskComments,
+  onTaskActivity,
+  onTaskDelete,
 }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
@@ -62,11 +72,17 @@ export function Column({
             <DraggableTaskCard
               key={task.id}
               task={task}
-              assignee={members.find((m) => m.id === task.assignee_id)}
+              assignees={members.filter((m) =>
+                (taskAssignees[task.id] ?? []).includes(m.id),
+              )}
               labels={labels.filter((l) =>
                 (taskLabels[task.id] ?? []).includes(l.id),
               )}
               onClick={() => onTaskClick(task)}
+              onEdit={() => onTaskEdit(task)}
+              onComments={() => onTaskComments(task)}
+              onActivity={() => onTaskActivity(task)}
+              onDelete={() => onTaskDelete(task)}
             />
           ))
         )}

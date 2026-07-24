@@ -38,88 +38,75 @@ export function FilterBar({
         />
       </div>
 
-      <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-medium text-muted-foreground">
-          Priority
-        </span>
-        <Select
-          value={filters.priority}
-          onValueChange={(v) =>
-            setFilters({ ...filters, priority: v ?? "all" })
-          }
-        >
-          <SelectTrigger className="w-32">
-            <span className="flex flex-1 text-left text-sm">
-              {{
-                all: "All priorities",
-                high: "High",
-                normal: "Normal",
-                low: "Low",
-              }[filters.priority] ?? "All priorities"}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All priorities</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="normal">Normal</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Select
+        value={filters.priority}
+        onValueChange={(v) =>
+          setFilters({ ...filters, priority: v ?? "all" })
+        }
+      >
+        <SelectTrigger className="w-32">
+          <span className="flex flex-1 text-left text-sm">
+            {{
+              all: "All Priority",
+              high: "High",
+              normal: "Normal",
+              low: "Low",
+            }[filters.priority] ?? "All Priority"}
+          </span>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="high">High</SelectItem>
+          <SelectItem value="normal">Normal</SelectItem>
+          <SelectItem value="low">Low</SelectItem>
+        </SelectContent>
+      </Select>
 
-      <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-medium text-muted-foreground">
-          Assignee
-        </span>
-        <Select
-          value={filters.assignee}
-          onValueChange={(v) =>
-            setFilters({ ...filters, assignee: v ?? "all" })
-          }
-        >
-          <SelectTrigger className="w-36">
-            <span className="flex flex-1 text-left text-sm">
-              {filters.assignee === "all"
-                ? "All assignees"
-                : (members.find((m) => m.id === filters.assignee)?.name ??
-                  "All assignees")}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All assignees</SelectItem>
-            {members.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select
+        value={filters.assignee}
+        onValueChange={(v) =>
+          setFilters({ ...filters, assignee: v ?? "all" })
+        }
+      >
+        <SelectTrigger className="w-36">
+          <span className="flex flex-1 text-left text-sm">
+            {filters.assignee === "all"
+              ? "All Assignee"
+              : (members.find((m) => m.id === filters.assignee)?.name ??
+                "All Assignee")}
+          </span>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          {members.map((m) => (
+            <SelectItem key={m.id} value={m.id}>
+              {m.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-medium text-muted-foreground">Label</span>
-        <Select
-          value={filters.label}
-          onValueChange={(v) => setFilters({ ...filters, label: v ?? "all" })}
-        >
-          <SelectTrigger className="w-32">
-            <span className="flex flex-1 text-left text-sm">
-              {filters.label === "all"
-                ? "All labels"
-                : (labels.find((l) => l.id === filters.label)?.name ??
-                  "All labels")}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All labels</SelectItem>
-            {labels.map((l) => (
-              <SelectItem key={l.id} value={l.id}>
-                {l.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select
+        value={filters.label}
+        onValueChange={(v) => setFilters({ ...filters, label: v ?? "all" })}
+      >
+        <SelectTrigger className="w-32">
+          <span className="flex flex-1 text-left text-sm">
+            {filters.label === "all"
+              ? "All Label"
+              : (labels.find((l) => l.id === filters.label)?.name ??
+                "All Label")}
+          </span>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          {labels.map((l) => (
+            <SelectItem key={l.id} value={l.id}>
+              {l.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { NewTask } from "@/hooks/useTasks";
 import type { Priority, Status, TeamMember, Label, Task } from "@/types";
 
@@ -44,7 +45,7 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<Priority>("normal");
   const [status, setStatus] = useState<Status>("todo");
   const [dueDate, setDueDate] = useState("");
-  const [assigneeId, setAssigneeId] = useState<string>("none");
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,7 +60,7 @@ export function CreateTaskDialog({
     setDescription("");
     setPriority("normal");
     setDueDate("");
-    setAssigneeId("none");
+    setSelectedAssignees([]);
     setStatus("todo");
     setSelectedLabels([]);
   }
@@ -74,7 +75,7 @@ export function CreateTaskDialog({
         priority,
         status,
         due_date: dueDate || null,
-        assignee_id: assigneeId === "none" ? null : assigneeId,
+        assignee_ids: selectedAssignees,
       });
       for (const labelId of selectedLabels) {
         await onToggleLabel(newTask.id, labelId);
@@ -132,9 +133,11 @@ export function CreateTaskDialog({
                   </span>
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([val, label]) => (
-                    <SelectItem key={val} value={val}>{label}</SelectItem>
-                  ))}
+                  {(Object.entries(STATUS_LABELS) as [Status, string][])
+                    .filter(([val]) => val !== "done")
+                    .map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -169,23 +172,42 @@ export function CreateTaskDialog({
           {members.length > 0 && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Assignee</label>
-              <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? "none")}>
-                <SelectTrigger>
-                  <span className="flex flex-1 text-left text-sm">
-                    {assigneeId === "none"
-                      ? "Unassigned"
-                      : (members.find((m) => m.id === assigneeId)?.name ?? "Unassigned")}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {members.map((m) => {
+                  const active = selectedAssignees.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedAssignees((prev) =>
+                          prev.includes(m.id)
+                            ? prev.filter((id) => id !== m.id)
+                            : [...prev, m.id],
+                        )
+                      }
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full py-0.5 pl-1 pr-2.5 text-xs font-medium transition-all",
+                        active ? "text-white" : "text-muted-foreground opacity-60",
+                      )}
+                      style={{
+                        backgroundColor: active ? m.avatar_color : "transparent",
+                        border: `1px solid ${m.avatar_color}`,
+                      }}
+                    >
+                      <span
+                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ backgroundColor: m.avatar_color }}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span title={m.name.length > 10 ? m.name : undefined}>
+                        {m.name.length > 10 ? m.name.slice(0, 10) + "…" : m.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -207,8 +229,9 @@ export function CreateTaskDialog({
                         outline: selected ? `2px solid ${l.color}` : "none",
                         outlineOffset: "2px",
                       }}
+                      title={l.name.length > 10 ? l.name : undefined}
                     >
-                      {l.name}
+                      {l.name.length > 10 ? l.name.slice(0, 10) + "…" : l.name}
                     </button>
                   );
                 })}
@@ -226,6 +249,7 @@ export function CreateTaskDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!title.trim() || submitting}>
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {submitting ? "Creating…" : "Create task"}
           </Button>
         </DialogFooter>
