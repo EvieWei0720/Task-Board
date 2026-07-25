@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -25,7 +25,7 @@ import { useComments } from "@/hooks/useComments";
 import { useActivity } from "@/hooks/useActivity";
 import { timeAgo } from "@/lib/board";
 import { cn } from "@/lib/utils";
-import type { Task, TeamMember, Label, Status } from "@/types";
+import type { Task, TeamMember, Label, Status, Activity } from "@/types";
 
 const STATUS_LABELS: Record<Status, string> = {
   todo: "To Do",
@@ -46,6 +46,7 @@ export function TaskDetailPanel({
   updateTask,
   toggleTaskLabel,
   toggleTaskAssignee,
+  latestMoveActivity = null,
 }: {
   task: Task | null;
   open: boolean;
@@ -58,9 +59,19 @@ export function TaskDetailPanel({
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   toggleTaskLabel: (taskId: string, labelId: string) => Promise<void>;
   toggleTaskAssignee: (taskId: string, memberId: string) => Promise<void>;
+  latestMoveActivity?: Activity | null;
 }) {
   const { comments, addComment } = useComments(task?.id ?? null);
-  const { activity } = useActivity(task?.id ?? null);
+  const { activity, refetch: refetchActivity } = useActivity(task?.id ?? null);
+
+  // Merge optimistic move entry so the activity panel shows it instantly,
+  // before the async fetchActivity round-trip completes.
+  const displayActivity = useMemo(() => {
+    if (!latestMoveActivity) return activity;
+    const alreadyFetched = activity.some((a) => a.description === latestMoveActivity.description);
+    return alreadyFetched ? activity : [latestMoveActivity, ...activity];
+  }, [activity, latestMoveActivity]);
+
   const [commentText, setCommentText] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -81,6 +92,11 @@ export function TaskDetailPanel({
       setDraftLabels(taskLabels[task.id] ?? []);
     }
   }, [task?.id, open]);
+
+  // Refetch activity every time the panel opens so the latest entries are always visible
+  useEffect(() => {
+    if (open && task?.id) refetchActivity();
+  }, [open, task?.id, refetchActivity]);
 
   if (!task) return null;
   const t = task;
@@ -168,11 +184,11 @@ export function TaskDetailPanel({
             <SheetTitle className="pr-6 text-left">{t.title}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto pt-2">
-            {activity.length === 0 ? (
+            {displayActivity.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">No activity yet</p>
             ) : (
               <div className="space-y-3">
-                {activity.map((a) => (
+                {displayActivity.map((a) => (
                   <div key={a.id} className="flex gap-2.5 text-sm">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
                     <div>

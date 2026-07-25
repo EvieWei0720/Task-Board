@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import type { Status, Task } from "@/types";
+import type { Status, Task, Activity } from "@/types";
 import { AgentPanel } from "./AgentPanel";
 import type { AgentAction } from "@/hooks/useAgent";
 const STATUS_LABELS: Record<Status, string> = {
@@ -90,6 +90,7 @@ export function Board() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<"edit" | "comments" | "activity">("edit");
+  const [latestMoveActivity, setLatestMoveActivity] = useState<Activity | null>(null);
   const [pendingMove, setPendingMove] = useState<{ task: Task; newStatus: Status } | null>(null);
   const [filters, setFilters] = useState<Filters>({
     search: "",
@@ -177,11 +178,16 @@ export function Board() {
     if (!pendingMove) return;
     const { task, newStatus } = pendingMove;
     setPendingMove(null);
+    const description = `Moved from ${STATUS_LABELS[task.status]} → ${STATUS_LABELS[newStatus]}`;
     await updateTask(task.id, { status: newStatus });
-    logActivity(
-      task.id,
-      `Moved from ${STATUS_LABELS[task.status]} → ${STATUS_LABELS[newStatus]}`,
-    );
+    await logActivity(task.id, description);
+    setLatestMoveActivity({
+      id: `opt-${Date.now()}`,
+      task_id: task.id,
+      description,
+      user_id: "",
+      created_at: new Date().toISOString(),
+    });
   }
 
   function openTask(task: Task, tab: "edit" | "comments" | "activity" = "edit") {
@@ -311,6 +317,9 @@ export function Board() {
         updateTask={updateTask}
         toggleTaskLabel={toggleTaskLabel}
         toggleTaskAssignee={toggleTaskAssignee}
+        latestMoveActivity={
+          latestMoveActivity?.task_id === liveSelected?.id ? latestMoveActivity : null
+        }
       />
 
       <Dialog open={!!pendingMove} onOpenChange={(o) => !o && setPendingMove(null)}>
