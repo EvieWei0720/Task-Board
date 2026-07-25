@@ -9,6 +9,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { toast } from "sonner";
 import { useTasks } from "@/hooks/useTasks";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useLabels } from "@/hooks/useLabels";
@@ -22,13 +23,6 @@ import { ManageTeamDialog } from "./ManageTeamDialog";
 import { ManageLabelsDialog } from "./ManageLabelsDialog";
 import { FilterBar, type Filters } from "./FilterBar";
 import { TaskDetailPanel } from "./TaskDetailPanel";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import type { Status, Task, Activity } from "@/types";
 import { AgentPanel } from "./AgentPanel";
 import type { AgentAction } from "@/hooks/useAgent";
@@ -91,7 +85,6 @@ export function Board() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<"edit" | "comments" | "activity">("edit");
   const [latestMoveActivity, setLatestMoveActivity] = useState<Activity | null>(null);
-  const [pendingMove, setPendingMove] = useState<{ task: Task; newStatus: Status } | null>(null);
   const [filters, setFilters] = useState<Filters>({
     search: "",
     priority: "all",
@@ -169,24 +162,30 @@ export function Board() {
     if (!over) return;
     const task = tasks.find((t) => t.id === active.id);
     const newStatus = over.id as Status;
-    if (task && task.status !== newStatus) {
-      setPendingMove({ task, newStatus });
-    }
-  }
+    if (!task || task.status === newStatus) return;
 
-  async function confirmMove() {
-    if (!pendingMove) return;
-    const { task, newStatus } = pendingMove;
-    setPendingMove(null);
-    const description = `Moved from ${STATUS_LABELS[task.status]} → ${STATUS_LABELS[newStatus]}`;
-    await updateTask(task.id, { status: newStatus });
-    await logActivity(task.id, description);
+    const oldStatus = task.status;
+    const description = `Moved from ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[newStatus]}`;
+
+    updateTask(task.id, { status: newStatus });
+    logActivity(task.id, description);
     setLatestMoveActivity({
       id: `opt-${Date.now()}`,
       task_id: task.id,
       description,
       user_id: "",
       created_at: new Date().toISOString(),
+    });
+
+    toast(`Moved to ${STATUS_LABELS[newStatus]}`, {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          updateTask(task.id, { status: oldStatus });
+          logActivity(task.id, `Moved back to ${STATUS_LABELS[oldStatus]}`);
+        },
+      },
     });
   }
 
@@ -322,32 +321,6 @@ export function Board() {
         }
       />
 
-      <Dialog open={!!pendingMove} onOpenChange={(o) => !o && setPendingMove(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Move task?</DialogTitle>
-          </DialogHeader>
-          {pendingMove && (
-            <p className="text-sm text-muted-foreground">
-              Move "{pendingMove.task.title}" from{" "}
-              <span className="font-medium text-foreground">
-                {STATUS_LABELS[pendingMove.task.status]}
-              </span>{" "}
-              to{" "}
-              <span className="font-medium text-foreground">
-                {STATUS_LABELS[pendingMove.newStatus]}
-              </span>
-              ?
-            </p>
-          )}
-          <div className="mt-2 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setPendingMove(null)}>
-              Cancel
-            </Button>
-            <Button onClick={confirmMove}>Move</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

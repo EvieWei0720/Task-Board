@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { useAuth } from "@/lib/AuthProvider";
 import { Board } from "@/components/Board";
 
@@ -20,5 +21,10 @@ export default function App() {
     );
   }
 
-  return <Board />;
+  return (
+    <>
+      <Board />
+      <Toaster position="bottom-right" richColors />
+    </>
+  );
 }

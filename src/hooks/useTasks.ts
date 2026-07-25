@@ -28,7 +28,6 @@ export function useTasks() {
       supabase
         .from("tasks")
         .select("*")
-        .order("position", { ascending: true })
         .order("created_at", { ascending: true }),
       supabase.from("task_labels").select("task_id, label_id"),
       supabase.from("task_assignees").select("task_id, member_id"),
