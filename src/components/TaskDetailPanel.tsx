@@ -317,35 +317,34 @@ export function TaskDetailPanel({
           )}
 
           {/* Labels */}
-          <div className="space-y-3">
-            <label className="text-xs font-medium text-muted-foreground">Labels</label>
-            <div className="flex flex-wrap gap-1.5">
-              {labels.map((l) => {
-                const active = draftLabels.includes(l.id);
-                return (
-                  <button
-                    key={l.id}
-                    onClick={() => toggleDraftLabel(l.id)}
-                    className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-medium transition-all",
-                      active ? "text-white" : "text-muted-foreground opacity-50",
-                    )}
-                    style={{
-                      backgroundColor: active ? l.color : "transparent",
-                      border: `1px solid ${l.color}`,
-                    }}
-                  >
-                    <span title={l.name.length > 10 ? l.name : undefined}>
-                      {l.name.length > 10 ? l.name.slice(0, 10) + "…" : l.name}
-                    </span>
-                  </button>
-                );
-              })}
-              {labels.length === 0 && (
-                <span className="text-xs text-muted-foreground">No labels created yet</span>
-              )}
+          {labels.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-xs font-medium text-muted-foreground">Labels</label>
+              <div className="flex flex-wrap gap-1.5">
+                {labels.map((l) => {
+                  const active = draftLabels.includes(l.id);
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => toggleDraftLabel(l.id)}
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 text-xs font-medium transition-all",
+                        active ? "text-white" : "text-muted-foreground opacity-50",
+                      )}
+                      style={{
+                        backgroundColor: active ? l.color : "transparent",
+                        border: `1px solid ${l.color}`,
+                      }}
+                    >
+                      <span title={l.name.length > 10 ? l.name : undefined}>
+                        {l.name.length > 10 ? l.name.slice(0, 10) + "…" : l.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter>
