@@ -17,7 +17,7 @@ interface BoardContext {
     title: string;
     status: string;
     priority: string;
-    assignee_id: string | null;
+    assignee_ids: string[];
   }[];
   members: { id: string; name: string }[];
   labels: { id: string; name: string }[];

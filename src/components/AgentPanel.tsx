@@ -16,11 +16,13 @@ export function AgentPanel({
   tasks,
   members,
   labels,
+  taskAssignees,
   onExecute,
 }: {
   tasks: Task[];
   members: TeamMember[];
   labels: Label[];
+  taskAssignees: Record<string, string[]>;
   onExecute: (actions: AgentAction[]) => Promise<void>;
 }) {
   const getContext = () => ({
@@ -31,7 +33,7 @@ export function AgentPanel({
       status: t.status,
       priority: t.priority,
       due_date: t.due_date,
-      assignee_id: t.assignee_id,
+      assignee_ids: taskAssignees[t.id] ?? [],
     })),
     members: members.map((m) => ({ id: m.id, name: m.name })),
     labels: labels.map((l) => ({ id: l.id, name: l.name })),

@@ -69,7 +69,8 @@ export function Board() {
           if (i.due_date) updates.due_date = i.due_date;
           await updateTask(i.task_id, updates);
         } else if (a.name === "assign_task") {
-          await updateTask(i.task_id, { assignee_id: i.assignee_id });
+          const already = (taskAssignees[i.task_id] ?? []).includes(i.assignee_id);
+          if (!already) await toggleTaskAssignee(i.task_id, i.assignee_id);
         } else if (a.name === "add_label") {
           const has = (taskLabels[i.task_id] ?? []).includes(i.label_id);
           if (!has) await toggleTaskLabel(i.task_id, i.label_id);
@@ -106,7 +107,7 @@ export function Board() {
         return false;
       if (filters.priority !== "all" && t.priority !== filters.priority)
         return false;
-      if (filters.assignee !== "all" && t.assignee_id !== filters.assignee)
+      if (filters.assignee !== "all" && !(taskAssignees[t.id] ?? []).includes(filters.assignee))
         return false;
       if (
         filters.label !== "all" &&
@@ -221,6 +222,7 @@ export function Board() {
             tasks={tasks}
             members={members}
             labels={labels}
+            taskAssignees={taskAssignees}
             onExecute={executeAgentActions}
           />
           <ManageTeamDialog
